@@ -53,6 +53,7 @@ impl Tui {
                 let tick_delay = tick_interval.tick();
                 let render_delay = render_interval.tick();
                 let crossterm_event = reader.next().fuse();
+
                 tokio::select! {
                     _ = _cancellation_token.cancelled() => {
                         break;

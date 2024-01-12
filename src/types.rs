@@ -3,6 +3,10 @@ use crossterm::event::{KeyEvent, MouseEvent};
 pub enum Action {
     Render,
     Quit,
+    Parent,
+    Child,
+    MoveUp,
+    MoveDown,
 }
 
 pub enum Event {
