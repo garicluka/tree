@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use anyhow::Result;
 use crossterm::event::{KeyCode, KeyEventKind};
 use ratatui::{
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Constraint, Direction, Layout},
     style::{Color, Stylize},
     widgets::Paragraph,
     Frame,
@@ -84,18 +84,16 @@ impl App {
                         if let Some(parent) = self.current_path.parent() {
                             self.current_path = parent.to_path_buf();
                             self.current_position = 0;
+                            self.all_children = Self::get_all_children(&self.current_path)?;
                         }
                     }
                     Action::Child => {
                         if self.current_position != 0 {
-                            let mut children = vec![];
-                            let read_dir = self.current_path.read_dir()?;
-                            for entry in read_dir.flatten() {
-                                children.push(entry.path());
-                            }
-                            let child = children[self.current_position as usize - 1].clone();
+                            let child =
+                                self.all_children[self.current_position as usize - 1].clone();
                             self.current_path = child;
                             self.current_position = 0;
+                            self.all_children = Self::get_all_children(&self.current_path)?;
                         }
                     }
                     Action::MoveUp => {
@@ -110,9 +108,9 @@ impl App {
                             for entry in read_dir.flatten() {
                                 children.push(entry.path());
                             }
-                            // if self.current_position < children.len() as u16 {
-                            self.current_position += 1;
-                            // }
+                            if self.current_position < self.all_children.len() as u16 {
+                                self.current_position += 1;
+                            }
                         }
                     }
                 }
