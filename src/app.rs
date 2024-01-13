@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use crossterm::event::{KeyCode, KeyEventKind};
@@ -6,11 +6,12 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Stylize},
     widgets::Paragraph,
+    Frame,
 };
 use tokio::sync::mpsc;
 
 use crate::{
-    tui,
+    tui::{self},
     types::{self, Action},
     utils::get_current_path,
 };
@@ -19,15 +20,21 @@ pub struct App {
     should_quit: bool,
     current_path: PathBuf,
     current_position: u16,
+    all_children: Vec<PathBuf>,
 }
 
 impl App {
     pub fn new() -> Result<Self> {
         let current_path = get_current_path()?;
+        let all_children = Self::get_all_children(&current_path)?;
+        let should_quit = false;
+        let current_position = 0;
+
         Ok(Self {
-            should_quit: false,
+            should_quit,
             current_path,
-            current_position: 0,
+            current_position,
+            all_children,
         })
     }
 
@@ -69,64 +76,9 @@ impl App {
 
             while let Ok(action) = action_rx.try_recv() {
                 match action {
-                    Action::Quit => {
-                        self.should_quit = true;
-                    }
+                    Action::Quit => self.should_quit = true,
                     Action::Render => {
-                        tui.terminal.draw(|f| {
-                            let mut children = vec![];
-
-                            if self.current_path.is_dir() {
-                                let read_dir = if let Ok(dir) = self.current_path.read_dir() {
-                                    dir
-                                } else {
-                                    f.render_widget(
-                                        Paragraph::new("Cannot read directory!")
-                                            .bg(Color::Red)
-                                            .fg(Color::White),
-                                        Rect::new(0, 0, f.size().width, 1),
-                                    );
-                                    return;
-                                };
-                                for entry in read_dir.flatten() {
-                                    children.push(entry.path());
-                                }
-                            }
-
-                            let mut constraints = vec![];
-                            constraints.push(Constraint::Length(1));
-                            constraints
-                                .extend_from_slice(&vec![Constraint::Length(1); children.len()]);
-                            constraints.push(Constraint::Percentage(100));
-
-                            let layout =
-                                Layout::new(Direction::Vertical, constraints).split(f.size());
-
-                            let color = if self.current_position == 0 {
-                                Color::Gray
-                            } else {
-                                Color::Reset
-                            };
-
-                            f.render_widget(
-                                Paragraph::new(format!("current path: {:?}", self.current_path))
-                                    .bg(color),
-                                layout[0],
-                            );
-
-                            for (index, child) in children.iter().enumerate() {
-                                let color = if self.current_position == index as u16 + 1 {
-                                    Color::Gray
-                                } else {
-                                    Color::Reset
-                                };
-
-                                f.render_widget(
-                                    Paragraph::new(format!("{:?}", child)).bg(color),
-                                    layout[index + 1],
-                                );
-                            }
-                        })?;
+                        tui.terminal.draw(|f| self.render(f))?;
                     }
                     Action::Parent => {
                         if let Some(parent) = self.current_path.parent() {
@@ -158,9 +110,9 @@ impl App {
                             for entry in read_dir.flatten() {
                                 children.push(entry.path());
                             }
-                            if self.current_position < children.len() as u16 {
-                                self.current_position += 1;
-                            }
+                            // if self.current_position < children.len() as u16 {
+                            self.current_position += 1;
+                            // }
                         }
                     }
                 }
@@ -173,5 +125,47 @@ impl App {
         tui.stop()?;
 
         Ok(())
+    }
+
+    fn render(&mut self, f: &mut Frame) {
+        let mut constraints = Vec::new();
+        constraints.push(Constraint::Length(1));
+        constraints.extend_from_slice(&vec![Constraint::Length(1); self.all_children.len()]);
+        constraints.push(Constraint::Percentage(100));
+
+        let layout = Layout::new(Direction::Vertical, &constraints).split(f.size());
+        layout.iter().enumerate().for_each(|(index, area)| {
+            if index == layout.len() - 1 {
+                return;
+            }
+            let color = if self.current_position == index as u16 {
+                Color::Gray
+            } else {
+                Color::Reset
+            };
+            if index == 0 {
+                f.render_widget(
+                    Paragraph::new(format!("current path: {:?}", self.current_path)).bg(color),
+                    *area,
+                );
+                return;
+            }
+            f.render_widget(
+                Paragraph::new(format!("{:?}", self.all_children[index - 1])).bg(color),
+                *area,
+            );
+        });
+    }
+
+    fn get_all_children(path: &Path) -> Result<Vec<PathBuf>> {
+        let mut children = vec![];
+
+        if path.is_dir() {
+            for entry in path.read_dir()? {
+                children.push(entry?.path());
+            }
+        }
+
+        Ok(children)
     }
 }
