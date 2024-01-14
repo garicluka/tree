@@ -131,24 +131,8 @@ impl App {
             .for_each(|(index, area)| {
                 if index == 0 {
                     self.render_current_path(f, index, area);
-                    return;
-                }
-
-                let mid_height = f.size().height as usize / 2;
-
-                if self.current_position < mid_height {
-                    let child_index = index - 1;
-                    self.render_child(f, child_index, area);
-                } else if self.current_position >= self.children.len() - mid_height {
-                    let child_index = if self.children.len() < f.size().height as usize - 1 {
-                        index - 1
-                    } else {
-                        self.children.len() + index - f.size().height as usize
-                    };
-                    self.render_child(f, child_index, area);
                 } else {
-                    let child_index = self.current_position + index - mid_height;
-                    self.render_child(f, child_index, area);
+                    self.render_child(f, index, area);
                 }
             });
     }
@@ -165,7 +149,26 @@ impl App {
         );
     }
 
-    fn render_child(&self, f: &mut Frame, child_index: usize, area: &Rect) {
+    fn render_child(&self, f: &mut Frame, index: usize, area: &Rect) {
+        let mid_height = f.size().height as usize / 2;
+
+        if self.current_position < mid_height {
+            let child_index = index - 1;
+            self.render_child_inner(f, child_index, area);
+        } else if self.current_position >= self.children.len() - mid_height {
+            let child_index = if self.children.len() < f.size().height as usize - 1 {
+                index - 1
+            } else {
+                self.children.len() + index - f.size().height as usize
+            };
+            self.render_child_inner(f, child_index, area);
+        } else {
+            let child_index = self.current_position + index - mid_height;
+            self.render_child_inner(f, child_index, area);
+        }
+    }
+
+    fn render_child_inner(&self, f: &mut Frame, child_index: usize, area: &Rect) {
         let color = if self.current_position == child_index + 1 {
             Color::Gray
         } else {
