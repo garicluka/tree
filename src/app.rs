@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use anyhow::Result;
 use crossterm::event::{KeyCode, KeyEventKind};
 use ratatui::{
-    layout::{Constraint, Direction, Layout},
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Stylize},
     widgets::Paragraph,
     Frame,
@@ -118,70 +118,62 @@ impl App {
     }
 
     fn render(&mut self, f: &mut Frame) {
-        let mut constraints = Vec::new();
-        constraints.push(Constraint::Length(1));
-        constraints.extend_from_slice(&vec![Constraint::Length(1); f.size().height as usize - 1]);
+        let constraints: Vec<Constraint> = [
+            vec![Constraint::Length(1)],
+            vec![Constraint::Length(1); f.size().height as usize - 1],
+        ]
+        .concat();
 
-        let layout = Layout::new(Direction::Vertical, &constraints).split(f.size());
-        layout.iter().enumerate().for_each(|(index, area)| {
-            if index == 0 {
-                let color = if self.current_position == index {
-                    Color::Gray
-                } else {
-                    Color::Reset
-                };
-                f.render_widget(
-                    Paragraph::new(format!("current path: {:?}", self.current_path)).bg(color),
-                    *area,
-                );
-                return;
-            }
-            let mid_height = f.size().height as usize / 2;
+        Layout::new(Direction::Vertical, constraints)
+            .split(f.size())
+            .iter()
+            .enumerate()
+            .for_each(|(index, area)| {
+                if index == 0 {
+                    self.render_current_path(f, index, area);
+                    return;
+                }
 
-            if self.current_position < mid_height {
-                let child_index = index - 1;
-                let color = if self.current_position == child_index + 1 {
-                    Color::Gray
+                let mid_height = f.size().height as usize / 2;
+
+                if self.current_position < mid_height {
+                    let child_index = index - 1;
+                    self.render_child(f, child_index, area);
+                } else if self.current_position >= self.children.len() - mid_height {
+                    let child_index = self.children.len() + index - f.size().height as usize;
+                    self.render_child(f, child_index, area);
                 } else {
-                    Color::Reset
-                };
-                if child_index >= self.children.len() {
-                    return;
+                    let child_index = self.current_position + index - mid_height;
+                    self.render_child(f, child_index, area);
                 }
-                f.render_widget(
-                    Paragraph::new(format!("{:?}", self.children[child_index])).bg(color),
-                    *area,
-                );
-            } else if self.current_position > self.children.len() - mid_height - 1 {
-                let child_index = self.children.len() + index - f.size().height as usize;
-                let color = if self.current_position == child_index + 1 {
-                    Color::Gray
-                } else {
-                    Color::Reset
-                };
-                if child_index >= self.children.len() {
-                    return;
-                }
-                f.render_widget(
-                    Paragraph::new(format!("{:?}", self.children[child_index])).bg(color),
-                    *area,
-                );
-            } else {
-                let child_index = self.current_position + index - mid_height;
-                let color = if self.current_position == child_index + 1 {
-                    Color::Gray
-                } else {
-                    Color::Reset
-                };
-                if child_index >= self.children.len() {
-                    return;
-                }
-                f.render_widget(
-                    Paragraph::new(format!("{:?}", self.children[child_index])).bg(color),
-                    *area,
-                );
-            }
-        });
+            });
+    }
+
+    fn render_current_path(&self, f: &mut Frame, index: usize, area: &Rect) {
+        let color = if self.current_position == index {
+            Color::Gray
+        } else {
+            Color::Reset
+        };
+        f.render_widget(
+            Paragraph::new(format!("current path: {:?}", self.current_path)).bg(color),
+            *area,
+        );
+    }
+
+    fn render_child(&self, f: &mut Frame, child_index: usize, area: &Rect) {
+        let color = if self.current_position == child_index + 1 {
+            Color::Gray
+        } else {
+            Color::Reset
+        };
+        if child_index >= self.children.len() {
+            return;
+        }
+        f.render_widget(
+            Paragraph::new(format!("{:?}", self.children[child_index])).bg(color),
+            *area,
+        );
     }
 
     fn get_all_children(path: &Path) -> Result<Vec<PathBuf>> {
