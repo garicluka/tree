@@ -120,32 +120,67 @@ impl App {
     fn render(&mut self, f: &mut Frame) {
         let mut constraints = Vec::new();
         constraints.push(Constraint::Length(1));
-
-        constraints.extend_from_slice(&vec![Constraint::Length(1); self.children.len()]);
-
-        constraints.push(Constraint::Percentage(100));
+        constraints.extend_from_slice(&vec![Constraint::Length(1); f.size().height as usize - 1]);
 
         let layout = Layout::new(Direction::Vertical, &constraints).split(f.size());
         layout.iter().enumerate().for_each(|(index, area)| {
-            if index == layout.len() - 1 {
-                return;
-            }
-            let color = if self.current_position == index {
-                Color::Gray
-            } else {
-                Color::Reset
-            };
             if index == 0 {
+                let color = if self.current_position == index {
+                    Color::Gray
+                } else {
+                    Color::Reset
+                };
                 f.render_widget(
                     Paragraph::new(format!("current path: {:?}", self.current_path)).bg(color),
                     *area,
                 );
                 return;
             }
-            f.render_widget(
-                Paragraph::new(format!("{:?}", self.children[index - 1])).bg(color),
-                *area,
-            );
+            let mid_height = f.size().height as usize / 2;
+
+            if self.current_position < mid_height {
+                let child_index = index - 1;
+                let color = if self.current_position == child_index + 1 {
+                    Color::Gray
+                } else {
+                    Color::Reset
+                };
+                if child_index >= self.children.len() {
+                    return;
+                }
+                f.render_widget(
+                    Paragraph::new(format!("{:?}", self.children[child_index])).bg(color),
+                    *area,
+                );
+            } else if self.current_position > self.children.len() - mid_height - 1 {
+                let child_index = self.children.len() + index - f.size().height as usize;
+                let color = if self.current_position == child_index + 1 {
+                    Color::Gray
+                } else {
+                    Color::Reset
+                };
+                if child_index >= self.children.len() {
+                    return;
+                }
+                f.render_widget(
+                    Paragraph::new(format!("{:?}", self.children[child_index])).bg(color),
+                    *area,
+                );
+            } else {
+                let child_index = self.current_position + index - mid_height;
+                let color = if self.current_position == child_index + 1 {
+                    Color::Gray
+                } else {
+                    Color::Reset
+                };
+                if child_index >= self.children.len() {
+                    return;
+                }
+                f.render_widget(
+                    Paragraph::new(format!("{:?}", self.children[child_index])).bg(color),
+                    *area,
+                );
+            }
         });
     }
 
