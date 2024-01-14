@@ -6,7 +6,9 @@ pub enum Action {
     Parent,
     Child,
     MoveUp,
+    MoveUpALOT,
     MoveDown,
+    MoveDownALOT,
 }
 
 pub enum Event {

@@ -57,8 +57,14 @@ impl App {
                                 KeyCode::Char('j') => {
                                     action_tx.send(Action::MoveDown)?;
                                 }
+                                KeyCode::Char('J') => {
+                                    action_tx.send(Action::MoveDownALOT)?;
+                                }
                                 KeyCode::Char('k') => {
                                     action_tx.send(Action::MoveUp)?;
+                                }
+                                KeyCode::Char('K') => {
+                                    action_tx.send(Action::MoveUpALOT)?;
                                 }
                                 KeyCode::Char('u') => {
                                     action_tx.send(Action::Parent)?;
@@ -100,9 +106,23 @@ impl App {
                             self.current_position -= 1;
                         }
                     }
+                    Action::MoveUpALOT => {
+                        if self.current_position > 9 {
+                            self.current_position -= 10;
+                        } else {
+                            self.current_position = 0;
+                        }
+                    }
                     Action::MoveDown => {
                         if self.current_position < self.children.len() {
                             self.current_position += 1;
+                        }
+                    }
+                    Action::MoveDownALOT => {
+                        if self.current_position + 9 < self.children.len() {
+                            self.current_position += 10;
+                        } else {
+                            self.current_position = self.children.len();
                         }
                     }
                 }
@@ -126,7 +146,7 @@ impl App {
             current_path: &Path,
         ) {
             let color = if current_position == index {
-                Color::Gray
+                Color::DarkGray
             } else {
                 Color::Reset
             };
@@ -150,9 +170,8 @@ impl App {
                 current_position: usize,
                 children: &Vec<PathBuf>,
             ) {
-                // children: Vec<PathBuf>,
                 let color = if current_position == child_index + 1 {
-                    Color::Gray
+                    Color::DarkGray
                 } else {
                     Color::Reset
                 };
