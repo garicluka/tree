@@ -140,7 +140,11 @@ impl App {
                     let child_index = index - 1;
                     self.render_child(f, child_index, area);
                 } else if self.current_position >= self.children.len() - mid_height {
-                    let child_index = self.children.len() + index - f.size().height as usize;
+                    let child_index = if self.children.len() < f.size().height as usize - 1 {
+                        index - 1
+                    } else {
+                        self.children.len() + index - f.size().height as usize
+                    };
                     self.render_child(f, child_index, area);
                 } else {
                     let child_index = self.current_position + index - mid_height;
