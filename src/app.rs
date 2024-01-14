@@ -118,6 +118,70 @@ impl App {
     }
 
     fn render(&mut self, f: &mut Frame) {
+        fn render_current_path(
+            f: &mut Frame,
+            index: usize,
+            area: &Rect,
+            current_position: usize,
+            current_path: &Path,
+        ) {
+            let color = if current_position == index {
+                Color::Gray
+            } else {
+                Color::Reset
+            };
+            f.render_widget(
+                Paragraph::new(format!("current path: {:?}", current_path)).bg(color),
+                *area,
+            );
+        }
+
+        fn render_child(
+            f: &mut Frame,
+            index: usize,
+            area: &Rect,
+            current_position: usize,
+            children: &Vec<PathBuf>,
+        ) {
+            fn render_child_inner(
+                f: &mut Frame,
+                child_index: usize,
+                area: &Rect,
+                current_position: usize,
+                children: &Vec<PathBuf>,
+            ) {
+                // children: Vec<PathBuf>,
+                let color = if current_position == child_index + 1 {
+                    Color::Gray
+                } else {
+                    Color::Reset
+                };
+                if child_index >= children.len() {
+                    return;
+                }
+                f.render_widget(
+                    Paragraph::new(format!("{:?}", children[child_index])).bg(color),
+                    *area,
+                );
+            }
+            let mid_height = f.size().height as usize / 2;
+
+            if current_position < mid_height {
+                let child_index = index - 1;
+                render_child_inner(f, child_index, area, current_position, children);
+            } else if current_position >= children.len() - mid_height {
+                let child_index = if children.len() < f.size().height as usize - 1 {
+                    index - 1
+                } else {
+                    children.len() + index - f.size().height as usize
+                };
+                render_child_inner(f, child_index, area, current_position, children);
+            } else {
+                let child_index = current_position + index - mid_height;
+                render_child_inner(f, child_index, area, current_position, children);
+            }
+        }
+
         let constraints: Vec<Constraint> = [
             vec![Constraint::Length(1)],
             vec![Constraint::Length(1); f.size().height as usize - 1],
@@ -130,57 +194,11 @@ impl App {
             .enumerate()
             .for_each(|(index, area)| {
                 if index == 0 {
-                    self.render_current_path(f, index, area);
+                    render_current_path(f, index, area, self.current_position, &self.current_path);
                 } else {
-                    self.render_child(f, index, area);
+                    render_child(f, index, area, self.current_position, &self.children);
                 }
             });
-    }
-
-    fn render_current_path(&self, f: &mut Frame, index: usize, area: &Rect) {
-        let color = if self.current_position == index {
-            Color::Gray
-        } else {
-            Color::Reset
-        };
-        f.render_widget(
-            Paragraph::new(format!("current path: {:?}", self.current_path)).bg(color),
-            *area,
-        );
-    }
-
-    fn render_child(&self, f: &mut Frame, index: usize, area: &Rect) {
-        let mid_height = f.size().height as usize / 2;
-
-        if self.current_position < mid_height {
-            let child_index = index - 1;
-            self.render_child_inner(f, child_index, area);
-        } else if self.current_position >= self.children.len() - mid_height {
-            let child_index = if self.children.len() < f.size().height as usize - 1 {
-                index - 1
-            } else {
-                self.children.len() + index - f.size().height as usize
-            };
-            self.render_child_inner(f, child_index, area);
-        } else {
-            let child_index = self.current_position + index - mid_height;
-            self.render_child_inner(f, child_index, area);
-        }
-    }
-
-    fn render_child_inner(&self, f: &mut Frame, child_index: usize, area: &Rect) {
-        let color = if self.current_position == child_index + 1 {
-            Color::Gray
-        } else {
-            Color::Reset
-        };
-        if child_index >= self.children.len() {
-            return;
-        }
-        f.render_widget(
-            Paragraph::new(format!("{:?}", self.children[child_index])).bg(color),
-            *area,
-        );
     }
 
     fn get_all_children(path: &Path) -> Result<Vec<PathBuf>> {
