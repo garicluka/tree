@@ -106,16 +106,16 @@ impl App {
                             self.current_position -= 1;
                         }
                     }
+                    Action::MoveDown => {
+                        if self.current_position < self.children.len() {
+                            self.current_position += 1;
+                        }
+                    }
                     Action::MoveUpALOT => {
                         if self.current_position > 9 {
                             self.current_position -= 10;
                         } else {
                             self.current_position = 0;
-                        }
-                    }
-                    Action::MoveDown => {
-                        if self.current_position < self.children.len() {
-                            self.current_position += 1;
                         }
                     }
                     Action::MoveDownALOT => {
