@@ -1,6 +1,3 @@
-use std::path::{Path, PathBuf};
-
-use anyhow::Result;
 use crossterm::event::{KeyCode, KeyEventKind};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
@@ -8,11 +5,12 @@ use ratatui::{
     widgets::Paragraph,
     Frame,
 };
+use std::path::{Path, PathBuf};
 use tokio::sync::mpsc;
 
 use crate::{
     tui::{self},
-    types::{self, Action},
+    types::{self, Action, Result},
     utils::get_current_path,
 };
 
@@ -38,7 +36,7 @@ impl App {
         })
     }
 
-    pub async fn run(&mut self) -> Result<()> {
+    pub async fn run(&mut self) -> Result {
         let (action_tx, mut action_rx) = mpsc::unbounded_channel::<Action>();
         let mut tui = tui::Tui::new()?;
 

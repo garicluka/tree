@@ -1,5 +1,4 @@
-use crate::types::Event;
-use anyhow::Result;
+use crate::types::{Event, Result};
 use crossterm::event::Event as CrosstermEvent;
 use crossterm::{
     cursor,
@@ -37,7 +36,7 @@ impl Tui {
         })
     }
 
-    pub fn start(&mut self) -> Result<()> {
+    pub fn start(&mut self) -> Result {
         crossterm::terminal::enable_raw_mode()?;
         crossterm::execute!(std::io::stderr(), EnterAlternateScreen, cursor::Hide)?;
         self.cancellation_token.cancel();
@@ -100,7 +99,7 @@ impl Tui {
         Ok(())
     }
 
-    pub fn stop(&mut self) -> Result<()> {
+    pub fn stop(&mut self) -> Result {
         self.cancellation_token.cancel();
         let mut counter = 0;
         while !self.task.is_finished() {

@@ -1,5 +1,4 @@
-use crate::cli;
-use anyhow::Result;
+use crate::{cli, types::Result};
 use clap::Parser;
 use std::{fs, path::PathBuf};
 

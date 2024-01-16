@@ -1,5 +1,7 @@
 use crossterm::event::{KeyEvent, MouseEvent};
 
+pub type Result<T = (), E = Box<dyn std::error::Error>> = std::result::Result<T, E>;
+
 pub enum Action {
     Render,
     Quit,
