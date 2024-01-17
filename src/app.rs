@@ -1,20 +1,18 @@
+use crate::{
+    tui::{self},
+    types::{self, Action, MyError, Result},
+    utils::get_current_path,
+    virt_terminal::VirtTerminal,
+};
 use crossterm::{
     event::{KeyCode, KeyEventKind},
     style::Color,
 };
-
 use std::{
     io::Stdout,
     path::{Path, PathBuf},
 };
 use tokio::sync::mpsc;
-
-use crate::{
-    tui::{self},
-    types::{self, Action, Result},
-    utils::get_current_path,
-    virt_terminal::VirtTerminal,
-};
 
 pub struct App {
     should_quit: bool,
@@ -181,9 +179,17 @@ impl App {
             Color::Reset
         };
 
+        let current_path = if let Some(path) = current_path.to_str() {
+            path
+        } else {
+            return Err(Box::from(MyError::new(
+                "cannot translate current_path to &str",
+            )));
+        };
+
         Self::line_with_text(
             virt_terminal,
-            format!("current path: {:?}", current_path).as_str(),
+            format!("current path: {}", current_path).as_str(),
             index,
             Color::Reset,
             color,
@@ -254,13 +260,15 @@ impl App {
             Color::Reset
         };
 
-        Self::line_with_text(
-            virt_terminal,
-            format!("{:?}", children[child_index]).as_str(),
-            index,
-            Color::Reset,
-            color,
-        )?;
+        let child_path = if let Some(path) = children[child_index].to_str() {
+            path
+        } else {
+            return Err(Box::from(MyError::new(
+                "cannot translate current_path to &str",
+            )));
+        };
+
+        Self::line_with_text(virt_terminal, child_path, index, Color::Reset, color)?;
 
         Ok(())
     }
