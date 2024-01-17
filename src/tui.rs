@@ -5,7 +5,6 @@ use crossterm::{
     terminal::{EnterAlternateScreen, LeaveAlternateScreen},
 };
 use futures::{FutureExt, StreamExt};
-use ratatui::{backend::CrosstermBackend, Terminal};
 use std::time::Duration;
 use tokio::{
     sync::mpsc::{self, UnboundedReceiver, UnboundedSender},
@@ -14,7 +13,7 @@ use tokio::{
 use tokio_util::sync::CancellationToken;
 
 pub struct Tui {
-    pub terminal: Terminal<CrosstermBackend<std::io::Stdout>>,
+    pub stdout: std::io::Stdout,
     task: JoinHandle<()>,
     cancellation_token: CancellationToken,
     event_rx: UnboundedReceiver<Event>,
@@ -23,12 +22,12 @@ pub struct Tui {
 
 impl Tui {
     pub fn new() -> Result<Self> {
-        let terminal = ratatui::Terminal::new(CrosstermBackend::new(std::io::stdout()))?;
+        let stdout = std::io::stdout();
         let (event_tx, event_rx) = mpsc::unbounded_channel();
         let cancellation_token = CancellationToken::new();
         let task = tokio::spawn(async {});
         Ok(Self {
-            terminal,
+            stdout,
             event_rx,
             event_tx,
             task,
@@ -109,7 +108,6 @@ impl Tui {
                 self.task.abort();
             }
             if counter > 100 {
-                log::error!("Failed to abort task in 100 milliseconds for unknown reason!");
                 break;
             }
         }

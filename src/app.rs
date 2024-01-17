@@ -1,11 +1,15 @@
-use crossterm::event::{KeyCode, KeyEventKind};
-use ratatui::{
-    layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Stylize},
-    widgets::Paragraph,
-    Frame,
+use crossterm::{
+    cursor,
+    event::{KeyCode, KeyEventKind},
+    style::{Color, PrintStyledContent, Stylize},
+    terminal::{Clear, ClearType},
+    QueueableCommand,
 };
-use std::path::{Path, PathBuf};
+
+use std::{
+    io::{Stdout, Write},
+    path::{Path, PathBuf},
+};
 use tokio::sync::mpsc;
 
 use crate::{
@@ -82,7 +86,7 @@ impl App {
                 match action {
                     Action::Quit => self.should_quit = true,
                     Action::Render => {
-                        tui.terminal.draw(|f| self.render(f))?;
+                        self.render(&mut tui.stdout);
                     }
                     Action::Parent => {
                         if let Some(parent) = self.current_path.parent() {
@@ -135,88 +139,104 @@ impl App {
         Ok(())
     }
 
-    fn render(&mut self, f: &mut Frame) {
-        fn render_current_path(
-            f: &mut Frame,
-            index: usize,
-            area: &Rect,
-            current_position: usize,
-            current_path: &Path,
-        ) {
-            let color = if current_position == index {
-                Color::DarkGray
+    fn render(&self, stdout: &mut Stdout) {
+        stdout.queue(Clear(ClearType::All)).unwrap();
+
+        Self::render_current_path(stdout, 0, self.current_position, &self.current_path);
+
+        let height = crossterm::terminal::size().unwrap().1;
+
+        for i in 1..height as usize {
+            Self::render_child(stdout, i, self.current_position, &self.children);
+        }
+
+        stdout.flush().unwrap();
+    }
+
+    fn render_current_path(
+        stdout: &mut Stdout,
+        index: usize,
+        current_position: usize,
+        current_path: &Path,
+    ) {
+        let color = if current_position == index {
+            Color::DarkGrey
+        } else {
+            Color::Reset
+        };
+        Self::line_with_text(
+            stdout,
+            format!("current path: {:?}", current_path).as_str(),
+            index as u16,
+            Color::Reset,
+            color,
+        );
+    }
+
+    fn line_with_text(stdout: &mut Stdout, text: &str, position: u16, fg: Color, bg: Color) {
+        let (width, _) = crossterm::terminal::size().unwrap();
+        let len = text.as_bytes().len();
+        for i in 0..width {
+            let content = if (i as usize) < len {
+                (text.as_bytes()[i as usize] as char).with(fg).on(bg)
             } else {
-                Color::Reset
+                ' '.on(bg)
             };
-            f.render_widget(
-                Paragraph::new(format!("current path: {:?}", current_path)).bg(color),
-                *area,
-            );
+
+            stdout
+                .queue(cursor::MoveTo(i, position))
+                .unwrap()
+                .queue(PrintStyledContent(content))
+                .unwrap();
+        }
+    }
+
+    fn render_child_inner(
+        stdout: &mut Stdout,
+        child_index: usize,
+        index: usize,
+        current_position: usize,
+        children: &Vec<PathBuf>,
+    ) {
+        let color = if current_position == child_index + 1 {
+            Color::DarkGrey
+        } else {
+            Color::Reset
+        };
+        if child_index >= children.len() {
+            return;
         }
 
-        fn render_child_inner(
-            f: &mut Frame,
-            child_index: usize,
-            area: &Rect,
-            current_position: usize,
-            children: &Vec<PathBuf>,
-        ) {
-            let color = if current_position == child_index + 1 {
-                Color::DarkGray
+        Self::line_with_text(
+            stdout,
+            format!("current path: {:?}", children[child_index]).as_str(),
+            index as u16,
+            Color::Reset,
+            color,
+        );
+    }
+    fn render_child(
+        stdout: &mut Stdout,
+        index: usize,
+        current_position: usize,
+        children: &Vec<PathBuf>,
+    ) {
+        let height = crossterm::terminal::size().unwrap().1;
+        let mid_height = height as usize / 2;
+        if current_position < mid_height {
+            let child_index = index - 1;
+            Self::render_child_inner(stdout, child_index, index, current_position, children);
+        } else if current_position >= children.len() - mid_height {
+            let child_index = if children.len() < height as usize - 1 {
+                index - 1
             } else {
-                Color::Reset
+                children.len() + index - height as usize
             };
-            if child_index >= children.len() {
-                return;
-            }
-            f.render_widget(
-                Paragraph::new(format!("{:?}", children[child_index])).bg(color),
-                *area,
-            );
+            Self::render_child_inner(stdout, child_index, index, current_position, children);
+        } else {
+            let child_index = current_position + index - mid_height;
+            Self::render_child_inner(stdout, child_index, index, current_position, children);
         }
-
-        fn render_child(
-            f: &mut Frame,
-            index: usize,
-            area: &Rect,
-            current_position: usize,
-            children: &Vec<PathBuf>,
-        ) {
-            let mid_height = f.size().height as usize / 2;
-
-            if current_position < mid_height {
-                let child_index = index - 1;
-                render_child_inner(f, child_index, area, current_position, children);
-            } else if current_position >= children.len() - mid_height {
-                let child_index = if children.len() < f.size().height as usize - 1 {
-                    index - 1
-                } else {
-                    children.len() + index - f.size().height as usize
-                };
-                render_child_inner(f, child_index, area, current_position, children);
-            } else {
-                let child_index = current_position + index - mid_height;
-                render_child_inner(f, child_index, area, current_position, children);
-            }
-        }
-
-        let constraints: Vec<Constraint> = [
-            vec![Constraint::Length(1)],
-            vec![Constraint::Length(1); f.size().height as usize - 1],
-        ]
-        .concat();
-
-        Layout::new(Direction::Vertical, constraints)
-            .split(f.size())
-            .iter()
-            .enumerate()
-            .for_each(|(index, area)| {
-                if index == 0 {
-                    render_current_path(f, index, area, self.current_position, &self.current_path);
-                } else {
-                    render_child(f, index, area, self.current_position, &self.children);
-                }
-            });
     }
 
     fn get_all_children(path: &Path) -> Result<Vec<PathBuf>> {
