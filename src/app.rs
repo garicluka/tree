@@ -146,20 +146,10 @@ impl App {
     }
 
     fn render(&mut self, stdout: &mut Stdout) -> Result {
-        Self::render_current_path(
-            0,
-            self.current_position,
-            &self.current_path,
-            &mut self.virt_terminal,
-        )?;
+        self.render_current_path()?;
 
-        for i in 1..self.virt_terminal.height {
-            Self::render_child(
-                &mut self.virt_terminal,
-                i,
-                self.current_position,
-                &self.children,
-            )?;
+        for row in 1..self.virt_terminal.height {
+            self.render_child(row)?;
         }
 
         self.virt_terminal.render(stdout)?;
@@ -167,19 +157,14 @@ impl App {
         Ok(())
     }
 
-    fn render_current_path(
-        index: usize,
-        current_position: usize,
-        current_path: &Path,
-        virt_terminal: &mut VirtTerminal,
-    ) -> Result {
-        let color = if current_position == index {
+    fn render_current_path(&mut self) -> Result {
+        let color = if self.current_position == 0 {
             Color::DarkGrey
         } else {
             Color::Reset
         };
 
-        let current_path = if let Some(path) = current_path.to_str() {
+        let current_path = if let Some(path) = self.current_path.to_str() {
             path
         } else {
             return Err(Box::from(MyError::new(
@@ -187,10 +172,9 @@ impl App {
             )));
         };
 
-        Self::line_with_text(
-            virt_terminal,
+        self.line_with_text(
             format!("current path: {}", current_path).as_str(),
-            index,
+            0,
             Color::Reset,
             color,
         )?;
@@ -198,98 +182,63 @@ impl App {
         Ok(())
     }
 
-    fn render_child(
-        virt_terminal: &mut VirtTerminal,
-        index: usize,
-        current_position: usize,
-        children: &Vec<PathBuf>,
-    ) -> Result {
-        let height = virt_terminal.height;
+    fn render_child(&mut self, row: usize) -> Result {
+        let height = self.virt_terminal.height;
         let mid_height = height / 2;
 
-        if current_position < mid_height {
-            let child_index = index - 1;
-            Self::render_child_inner(
-                virt_terminal,
-                child_index,
-                index,
-                current_position,
-                children,
-            )?;
-        } else if current_position >= children.len() - mid_height {
-            let child_index = if children.len() < height - 1 {
-                index - 1
+        if self.current_position < mid_height {
+            let child_index = row - 1;
+            self.render_child_inner(child_index, row)?;
+        } else if self.current_position >= self.children.len() - mid_height {
+            let child_index = if self.children.len() < height - 1 {
+                row - 1
             } else {
-                children.len() + index - height
+                self.children.len() + row - height
             };
-            Self::render_child_inner(
-                virt_terminal,
-                child_index,
-                index,
-                current_position,
-                children,
-            )?;
+            self.render_child_inner(child_index, row)?;
         } else {
-            let child_index = current_position + index - mid_height;
-            Self::render_child_inner(
-                virt_terminal,
-                child_index,
-                index,
-                current_position,
-                children,
-            )?;
+            let child_index = self.current_position + row - mid_height;
+            self.render_child_inner(child_index, row)?;
         }
 
         Ok(())
     }
 
-    fn render_child_inner(
-        virt_terminal: &mut VirtTerminal,
-        child_index: usize,
-        index: usize,
-        current_position: usize,
-        children: &Vec<PathBuf>,
-    ) -> Result {
-        if child_index >= children.len() {
+    fn render_child_inner(&mut self, child_index: usize, row: usize) -> Result {
+        if child_index >= self.children.len() {
             return Ok(());
         }
 
-        let color = if current_position == child_index + 1 {
+        let color = if self.current_position == child_index + 1 {
             Color::DarkGrey
         } else {
             Color::Reset
         };
 
-        let child_path = if let Some(path) = children[child_index].to_str() {
+        let temp_child_path = self.children[child_index].clone();
+        let child_path = if let Some(path) = temp_child_path.to_str() {
             path
         } else {
             return Err(Box::from(MyError::new(
-                "cannot translate current_path to &str",
+                "cannot translate child_path to &str",
             )));
         };
 
-        Self::line_with_text(virt_terminal, child_path, index, Color::Reset, color)?;
+        self.line_with_text(child_path, row, Color::Reset, color)?;
 
         Ok(())
     }
 
-    fn line_with_text(
-        virt_terminal: &mut VirtTerminal,
-
-        text: &str,
-        position: usize,
-        fg: Color,
-        bg: Color,
-    ) -> Result {
+    fn line_with_text(&mut self, text: &str, row: usize, fg: Color, bg: Color) -> Result {
         let len = text.as_bytes().len();
 
-        for i in 0..virt_terminal.width {
-            let content = if (i) < len {
-                text.as_bytes()[i] as char
+        for col in 0..self.virt_terminal.width {
+            let content = if col < len {
+                text.as_bytes()[col] as char
             } else {
                 ' '
             };
-            virt_terminal.change_cell(position, i, content, fg, bg);
+            self.virt_terminal.change_cell(row, col, content, fg, bg);
         }
 
         Ok(())
