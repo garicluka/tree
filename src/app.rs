@@ -80,6 +80,9 @@ impl App {
                             }
                         }
                     }
+                    types::Event::Resize(width, height) => {
+                        action_tx.send(Action::Resize(width, height))?
+                    }
                     _ => {}
                 }
             }
@@ -88,6 +91,11 @@ impl App {
                 match action {
                     Action::Quit => self.should_quit = true,
                     Action::Render => self.render(&mut tui.stdout)?,
+                    Action::Resize(width, height) => self.virt_terminal.resize(
+                        width as usize,
+                        height as usize,
+                        &mut tui.stdout,
+                    )?,
                     Action::Parent => {
                         if let Some(parent) = self.current_path.parent() {
                             self.current_path = parent.to_path_buf();
@@ -248,7 +256,7 @@ impl App {
 
         Self::line_with_text(
             virt_terminal,
-            format!("current path: {:?}", children[child_index]).as_str(),
+            format!("{:?}", children[child_index]).as_str(),
             index,
             Color::Reset,
             color,

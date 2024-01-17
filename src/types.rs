@@ -4,6 +4,7 @@ pub type Result<T = (), E = Box<dyn std::error::Error>> = std::result::Result<T,
 
 pub enum Action {
     Render,
+    Resize(u16, u16),
     Quit,
     Parent,
     Child,

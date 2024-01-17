@@ -69,10 +69,12 @@ impl VirtTerminal {
         Ok(())
     }
 
-    pub fn resize(&mut self, width: usize, height: usize) {
+    pub fn resize(&mut self, width: usize, height: usize, stdout: &mut Stdout) -> Result {
         self.old_cells = vec![vec![VirtCell::default(); width]; height];
         self.new_cells = vec![vec![VirtCell::default(); width]; height];
         self.width = width;
         self.height = height;
+        self.render(stdout)?;
+        Ok(())
     }
 }
