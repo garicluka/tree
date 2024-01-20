@@ -1,12 +1,11 @@
-use std::{error::Error, fmt::Display};
-
 use crossterm::event::{KeyEvent, MouseEvent};
+use std::{error::Error, fmt::Display};
 
 pub type Result<T = (), E = Box<dyn std::error::Error>> = std::result::Result<T, E>;
 
 #[derive(Debug)]
 pub struct MyError {
-    msg: String,
+    pub msg: String,
 }
 
 impl MyError {

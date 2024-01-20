@@ -53,27 +53,13 @@ impl App {
                     types::Event::Key(key) => {
                         if key.kind == KeyEventKind::Press {
                             match key.code {
-                                KeyCode::Char('q') => {
-                                    action_tx.send(Action::Quit)?;
-                                }
-                                KeyCode::Char('j') => {
-                                    action_tx.send(Action::MoveDown)?;
-                                }
-                                KeyCode::Char('J') => {
-                                    action_tx.send(Action::MoveDownALOT)?;
-                                }
-                                KeyCode::Char('k') => {
-                                    action_tx.send(Action::MoveUp)?;
-                                }
-                                KeyCode::Char('K') => {
-                                    action_tx.send(Action::MoveUpALOT)?;
-                                }
-                                KeyCode::Char('u') => {
-                                    action_tx.send(Action::Parent)?;
-                                }
-                                KeyCode::Char('d') => {
-                                    action_tx.send(Action::Child)?;
-                                }
+                                KeyCode::Char('q') => action_tx.send(Action::Quit)?,
+                                KeyCode::Char('j') => action_tx.send(Action::MoveDown)?,
+                                KeyCode::Char('J') => action_tx.send(Action::MoveDownALOT)?,
+                                KeyCode::Char('k') => action_tx.send(Action::MoveUp)?,
+                                KeyCode::Char('K') => action_tx.send(Action::MoveUpALOT)?,
+                                KeyCode::Char('u') => action_tx.send(Action::Parent)?,
+                                KeyCode::Char('d') => action_tx.send(Action::Child)?,
                                 _ => {}
                             }
                         }
@@ -152,7 +138,7 @@ impl App {
             self.render_child(row)?;
         }
 
-        self.virt_terminal.render(stdout)?;
+        self.virt_terminal.flush(stdout)?;
 
         Ok(())
     }

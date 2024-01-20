@@ -7,7 +7,7 @@ use crossterm::{
 use std::io::{Stdout, Write};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct VirtCell {
+struct VirtCell {
     fg: Color,
     bg: Color,
     content: char,
@@ -25,7 +25,7 @@ impl Default for VirtCell {
 
 pub struct VirtTerminal {
     old_cells: Vec<Vec<VirtCell>>,
-    pub new_cells: Vec<Vec<VirtCell>>,
+    new_cells: Vec<Vec<VirtCell>>,
     pub width: usize,
     pub height: usize,
 }
@@ -48,7 +48,7 @@ impl VirtTerminal {
         self.new_cells[row][col].bg = bg;
     }
 
-    pub fn render(&mut self, stdout: &mut Stdout) -> Result {
+    pub fn flush(&mut self, stdout: &mut Stdout) -> Result {
         for i in 0..self.height {
             for j in 0..self.width {
                 if self.old_cells[i][j] != self.new_cells[i][j] {
@@ -74,7 +74,7 @@ impl VirtTerminal {
         self.new_cells = vec![vec![VirtCell::default(); width]; height];
         self.width = width;
         self.height = height;
-        self.render(stdout)?;
+        self.flush(stdout)?;
         Ok(())
     }
 }
