@@ -74,7 +74,14 @@ impl VirtTerminal {
         self.new_cells = vec![vec![VirtCell::default(); width]; height];
         self.width = width;
         self.height = height;
-        self.flush(stdout)?;
+
+        for i in 0..self.height {
+            for j in 0..self.width {
+                stdout
+                    .queue(cursor::MoveTo(j as u16, i as u16))?
+                    .queue(PrintStyledContent(' '.with(Color::Reset).on(Color::Reset)))?;
+            }
+        }
         Ok(())
     }
 }
